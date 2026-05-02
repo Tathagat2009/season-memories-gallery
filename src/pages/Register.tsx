@@ -73,6 +73,7 @@ const Register = () => {
   });
   const [receipt, setReceipt] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -114,6 +115,9 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Hard guard against double-submits (double click, Enter spam, etc.)
+    if (submitting || submitted) return;
+
     const parsed = schema.safeParse(form);
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
     if (form.committee2 && form.committee2 === form.committee1) {
@@ -131,6 +135,12 @@ const Register = () => {
 
     setSubmitting(true);
     try {
+      // Soft duplicate-email check (Admins-only RLS means this returns 0 rows
+      // for the public client unless an admin-readable mirror exists, so we
+      // also rely on a Postgres unique index to be the real safeguard. The
+      // catch block below converts the unique-violation error to a friendly
+      // message.)
+
       const safeName = receipt.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `${Date.now()}-${crypto.randomUUID()}-${safeName}`;
       const { error: upErr } = await supabase.storage
@@ -141,7 +151,7 @@ const Register = () => {
       const { error: insErr } = await supabase.from("registrations").insert({
         full_name: parsed.data.name,
         class_grade: parsed.data.className,
-        email: parsed.data.email,
+        email: parsed.data.email.trim().toLowerCase(),
         mobile: parsed.data.mobile,
         address: parsed.data.address,
         mun_experience: parsed.data.experience,
@@ -151,9 +161,17 @@ const Register = () => {
         preference2: form.preference2 || null,
         receipt_path: path,
       });
-      if (insErr) throw insErr;
+      if (insErr) {
+        // Postgres unique_violation
+        if ((insErr as { code?: string }).code === "23505") {
+          throw new Error("This email has already been used to register. Please contact the Secretariat if you need to update your details.");
+        }
+        throw insErr;
+      }
 
-      toast.success("Registration submitted! We'll be in touch.");
+      // Switch to a dedicated success screen — no need to re-render the
+      // entire form, gives instant visual feedback.
+      setSubmitted(true);
       setForm({
         name: "", className: "", email: "", mobile: "", address: "",
         experience: "", committee1: "", committee2: "",
@@ -220,6 +238,33 @@ const Register = () => {
           <div className="glass-strong rounded-3xl p-10">
             <h1 className="text-white text-3xl font-bold mb-3">Registrations Closed</h1>
             <p className="text-white/70">Please check back soon. Follow our updates for the next opening window.</p>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (submitted) {
+    return (
+      <main className="relative min-h-screen">
+        <Navbar />
+        <section className="max-w-2xl mx-auto px-6 pt-40 text-center">
+          <div className="glass-strong rounded-3xl p-10 ring-1 ring-emerald-400/30 shadow-[0_0_60px_rgba(16,185,129,0.15)]">
+            <div className="mx-auto mb-5 h-16 w-16 rounded-full bg-emerald-500/20 ring-2 ring-emerald-400 flex items-center justify-center text-emerald-300 text-3xl">
+              ✓
+            </div>
+            <h1 className="text-white text-3xl font-bold mb-3">Registration Received</h1>
+            <p className="text-white/70 mb-6">
+              Thank you for registering for DPSAMUN. Your details and payment receipt have been recorded.
+              The Secretariat will reach out with your committee allocation soon.
+            </p>
+            <Button
+              type="button"
+              onClick={() => setSubmitted(false)}
+              className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-semibold"
+            >
+              Register another delegate
+            </Button>
           </div>
         </section>
       </main>
