@@ -244,6 +244,33 @@ const Register = () => {
     );
   }
 
+  if (submitted) {
+    return (
+      <main className="relative min-h-screen">
+        <Navbar />
+        <section className="max-w-2xl mx-auto px-6 pt-40 text-center">
+          <div className="glass-strong rounded-3xl p-10 ring-1 ring-emerald-400/30 shadow-[0_0_60px_rgba(16,185,129,0.15)]">
+            <div className="mx-auto mb-5 h-16 w-16 rounded-full bg-emerald-500/20 ring-2 ring-emerald-400 flex items-center justify-center text-emerald-300 text-3xl">
+              ✓
+            </div>
+            <h1 className="text-white text-3xl font-bold mb-3">Registration Received</h1>
+            <p className="text-white/70 mb-6">
+              Thank you for registering for DPSAMUN. Your details and payment receipt have been recorded.
+              The Secretariat will reach out with your committee allocation soon.
+            </p>
+            <Button
+              type="button"
+              onClick={() => setSubmitted(false)}
+              className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-semibold"
+            >
+              Register another delegate
+            </Button>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="relative min-h-screen pb-20">
       <Navbar />
