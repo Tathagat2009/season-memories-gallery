@@ -76,7 +76,7 @@ const Hero = () => {
         className="pointer-events-none absolute inset-0 bg-cover bg-center"
         style={{
           backgroundImage: `url(${heroFlags})`,
-          opacity: 0.2,
+          opacity: 0.35,
           mixBlendMode: "multiply",
         }}
       />
@@ -84,7 +84,7 @@ const Hero = () => {
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
-        style={{ background: "linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.45))" }}
+        style={{ background: "linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0.35))" }}
       />
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 h-[600px] w-[600px] rounded-full bg-emerald-400/10 blur-3xl" />
