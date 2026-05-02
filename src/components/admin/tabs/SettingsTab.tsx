@@ -44,6 +44,12 @@ const SettingsTab = () => {
 
   const save = async () => {
     if (!s) return;
+    const trimmedScanner = (s.payment_scanner_url ?? "").trim();
+    if (trimmedScanner) {
+      const cls = classifyImageUrl(trimmedScanner);
+      if (cls.kind === "share") return toast.error(cls.hint);
+      if (cls.kind === "other") return toast.error("Use a direct image URL (https://i.ibb.co/...).");
+    }
     setSaving(true);
     const { error } = await supabase
       .from("site_settings")
@@ -51,7 +57,8 @@ const SettingsTab = () => {
         countdown_target: s.countdown_target,
         countdown_active: s.countdown_active,
         registration_open: s.registration_open,
-      })
+        payment_scanner_url: trimmedScanner || null,
+      } as never)
       .eq("id", 1);
     setSaving(false);
     if (error) return toast.error(error.message);
@@ -90,6 +97,31 @@ const SettingsTab = () => {
           <Switch checked={s.registration_open} onCheckedChange={(v) => setS({ ...s, registration_open: v })} />
           <span className="text-white text-sm">Registration open (Start/Stop)</span>
         </div>
+      </div>
+
+      <div className="glass rounded-2xl p-4 space-y-4">
+        <h3 className="text-white font-semibold">Payment Scanner (UPI QR)</h3>
+        <Field label="Scanner image URL (ImgBB direct link, e.g. https://i.ibb.co/.../qr.png)">
+          <Input
+            value={s.payment_scanner_url ?? ""}
+            onChange={(e) => setS({ ...s, payment_scanner_url: e.target.value })}
+            placeholder="https://i.ibb.co/xxxxx/upi-qr.png"
+            className={inputCls}
+          />
+        </Field>
+        {s.payment_scanner_url && classifyImageUrl(s.payment_scanner_url).kind === "direct" && (
+          <div className="flex items-center gap-3">
+            <img
+              src={s.payment_scanner_url}
+              alt="Payment QR preview"
+              className="h-32 w-32 object-contain rounded-xl bg-white/95 p-2"
+            />
+            <p className="text-white/60 text-xs">Preview — this is what delegates will see on the registration form.</p>
+          </div>
+        )}
+        <p className="text-white/50 text-xs">
+          Upload your QR to imgbb.com, open the image, right-click → "Copy image address". The URL must start with <code>https://i.ibb.co/</code>. Leave blank to fall back to the placeholder.
+        </p>
       </div>
 
       <Button
