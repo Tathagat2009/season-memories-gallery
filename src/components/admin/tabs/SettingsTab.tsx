@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Field, inputCls } from "../Field";
+import { classifyImageUrl } from "@/lib/imgbb";
 
 interface SiteSettings {
   id: number;
   countdown_target: string | null;
   countdown_active: boolean;
   registration_open: boolean;
+  payment_scanner_url: string | null;
 }
 
 const toLocal = (iso: string | null) => (iso ? new Date(iso).toISOString().slice(0, 16) : "");
