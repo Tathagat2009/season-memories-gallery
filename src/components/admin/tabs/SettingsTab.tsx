@@ -27,15 +27,16 @@ const SettingsTab = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("site_settings")
-      .select("id, countdown_target, countdown_active, registration_open")
+      .select("id, countdown_target, countdown_active, registration_open, payment_scanner_url")
       .eq("id", 1)
       .maybeSingle();
     if (error) toast.error(error.message);
-    setS((data as SiteSettings) ?? {
+    setS((data as unknown as SiteSettings) ?? {
       id: 1,
       countdown_target: null,
       countdown_active: false,
       registration_open: true,
+      payment_scanner_url: null,
     });
     setLoading(false);
   };
