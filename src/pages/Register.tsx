@@ -64,6 +64,7 @@ const optionsForCategory = (cat: Category) => {
 const Register = () => {
   const [committees, setCommittees] = useState<Committee[]>([]);
   const [registrationOpenSite, setRegistrationOpenSite] = useState(true);
+  const [paymentScannerUrl, setPaymentScannerUrl] = useState<string | null>(null);
   const [loadingMeta, setLoadingMeta] = useState(true);
 
   const [form, setForm] = useState({
@@ -83,10 +84,12 @@ const Register = () => {
           .select("id, name, category, registration_open")
           .eq("registration_open", true)
           .order("sort_order").order("name"),
-        supabase.from("site_settings").select("registration_open").eq("id", 1).maybeSingle(),
+        supabase.from("site_settings").select("registration_open, payment_scanner_url" as never).eq("id", 1).maybeSingle(),
       ]);
       setCommittees((cRes.data ?? []) as Committee[]);
-      setRegistrationOpenSite(sRes.data?.registration_open ?? true);
+      const sd = sRes.data as { registration_open?: boolean; payment_scanner_url?: string | null } | null;
+      setRegistrationOpenSite(sd?.registration_open ?? true);
+      setPaymentScannerUrl(sd?.payment_scanner_url ?? null);
       setLoadingMeta(false);
     };
     load();
@@ -360,11 +363,19 @@ const Register = () => {
 
             <div className="flex flex-col md:flex-row gap-6 items-center">
               <div className="glass rounded-2xl p-5 flex flex-col items-center gap-3">
-                <div className="h-44 w-44 rounded-xl bg-white/95 flex items-center justify-center text-emerald-950">
-                  <div className="text-center">
-                    <QrCode className="h-20 w-20 mx-auto" strokeWidth={1.2} />
-                    <p className="text-xs font-semibold mt-2">UPI QR PLACEHOLDER</p>
-                  </div>
+                <div className="h-44 w-44 rounded-xl bg-white/95 flex items-center justify-center text-emerald-950 overflow-hidden">
+                  {paymentScannerUrl ? (
+                    <img
+                      src={paymentScannerUrl}
+                      alt="UPI payment QR code"
+                      className="h-full w-full object-contain p-2"
+                    />
+                  ) : (
+                    <div className="text-center">
+                      <QrCode className="h-20 w-20 mx-auto" strokeWidth={1.2} />
+                      <p className="text-xs font-semibold mt-2">UPI QR PLACEHOLDER</p>
+                    </div>
+                  )}
                 </div>
                 <p className="text-white/80 text-sm text-center">Scan to pay via any UPI app</p>
               </div>
