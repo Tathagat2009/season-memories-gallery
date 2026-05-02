@@ -15,3 +15,6 @@ create index if not exists registrations_created_at_idx
 -- Performance index for public allocations page (committee filter on published rows).
 create index if not exists allocations_published_committee_idx
   on public.allocations (committee_id) where published = true;
+
+-- Payment scanner image URL (UPI QR shown on Register page).
+alter table public.site_settings add column if not exists payment_scanner_url text;
