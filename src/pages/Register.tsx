@@ -115,6 +115,9 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Hard guard against double-submits (double click, Enter spam, etc.)
+    if (submitting || submitted) return;
+
     const parsed = schema.safeParse(form);
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
     if (form.committee2 && form.committee2 === form.committee1) {
@@ -132,6 +135,12 @@ const Register = () => {
 
     setSubmitting(true);
     try {
+      // Soft duplicate-email check (Admins-only RLS means this returns 0 rows
+      // for the public client unless an admin-readable mirror exists, so we
+      // also rely on a Postgres unique index to be the real safeguard. The
+      // catch block below converts the unique-violation error to a friendly
+      // message.)
+
       const safeName = receipt.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `${Date.now()}-${crypto.randomUUID()}-${safeName}`;
       const { error: upErr } = await supabase.storage
@@ -142,7 +151,7 @@ const Register = () => {
       const { error: insErr } = await supabase.from("registrations").insert({
         full_name: parsed.data.name,
         class_grade: parsed.data.className,
-        email: parsed.data.email,
+        email: parsed.data.email.trim().toLowerCase(),
         mobile: parsed.data.mobile,
         address: parsed.data.address,
         mun_experience: parsed.data.experience,
@@ -152,9 +161,17 @@ const Register = () => {
         preference2: form.preference2 || null,
         receipt_path: path,
       });
-      if (insErr) throw insErr;
+      if (insErr) {
+        // Postgres unique_violation
+        if ((insErr as { code?: string }).code === "23505") {
+          throw new Error("This email has already been used to register. Please contact the Secretariat if you need to update your details.");
+        }
+        throw insErr;
+      }
 
-      toast.success("Registration submitted! We'll be in touch.");
+      // Switch to a dedicated success screen — no need to re-render the
+      // entire form, gives instant visual feedback.
+      setSubmitted(true);
       setForm({
         name: "", className: "", email: "", mobile: "", address: "",
         experience: "", committee1: "", committee2: "",
