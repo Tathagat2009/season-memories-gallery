@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import {
   INDIAN_ACTORS,
@@ -72,6 +73,7 @@ const Register = () => {
     name: "", className: "", school: "", email: "", mobile: "", address: "", experience: "",
     committee1: "", committee2: "",
     preference1: "", preference2: "",
+    transportation_required: false,
   });
   const [receipt, setReceipt] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -158,6 +160,7 @@ const Register = () => {
         preference1: form.preference1 || null,
         preference2: form.preference2 || null,
         receipt_path: path,
+        transportation_required: form.transportation_required,
       });
       if (insErr) {
         if ((insErr as { code?: string }).code === "23505") {
@@ -171,6 +174,7 @@ const Register = () => {
         name: "", className: "", school: "", email: "", mobile: "", address: "",
         experience: "", committee1: "", committee2: "",
         preference1: "", preference2: "",
+        transportation_required: false,
       });
       setReceipt(null);
     } catch (err) {
@@ -266,7 +270,6 @@ const Register = () => {
   return (
     <main className="relative min-h-screen pb-20">
       <Navbar />
-
       <section className="relative z-10 max-w-3xl mx-auto px-6 pt-32">
         <div className="text-center mb-10">
           <h1 className="text-white text-4xl md:text-5xl font-extrabold tracking-tight">
@@ -346,6 +349,19 @@ const Register = () => {
             {renderPrefField(2, committee2Meta)}
           </div>
 
+          {/* Transportation */}
+          <div className="glass rounded-2xl p-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-white font-semibold">School Transportation</p>
+              <p className="text-white/60 text-sm mt-0.5">Do you require transportation provided by the school?</p>
+            </div>
+            <Switch
+              checked={form.transportation_required}
+              onCheckedChange={(v) => setForm((f) => ({ ...f, transportation_required: v }))}
+            />
+          </div>
+
+          {/* Payment */}
           <div className="pt-4 border-t border-white/10 space-y-5">
             <h2 className="text-white text-xl font-bold">Payment</h2>
             <div className="flex flex-col md:flex-row gap-6 items-center">
@@ -355,51 +371,3 @@ const Register = () => {
                     <img src={paymentScannerUrl} alt="UPI payment QR code" className="h-full w-full object-contain p-2" />
                   ) : (
                     <div className="text-center">
-                      <QrCode className="h-20 w-20 mx-auto" strokeWidth={1.2} />
-                      <p className="text-xs font-semibold mt-2">UPI QR PLACEHOLDER</p>
-                    </div>
-                  )}
-                </div>
-                <p className="text-white/80 text-sm text-center">Scan to pay via any UPI app</p>
-              </div>
-              <div className="flex-1 space-y-3 text-white/80 text-sm">
-                <p><span className="text-white font-semibold">Amount:</span> ₹ 1,500</p>
-                <p>After payment, upload the receipt screenshot below.</p>
-              </div>
-            </div>
-
-            <Field label="Payment Receipt * (image / PDF, max 5MB)">
-              <label className="glass rounded-xl border-dashed border-2 border-white/20 px-4 py-5 flex items-center gap-3 cursor-pointer hover:bg-white/10 transition">
-                <Upload className="h-5 w-5 text-white" />
-                <span className="text-white/80 text-sm flex-1 truncate">
-                  {receipt ? receipt.name : "Click to upload receipt"}
-                </span>
-                <input type="file" accept="image/*,application/pdf" className="hidden" onChange={onFile} />
-              </label>
-            </Field>
-          </div>
-
-          <Button
-            type="submit"
-            disabled={submitting}
-            className="w-full glass-strong rounded-full py-6 text-white font-semibold text-base hover:bg-white/20 border border-white/20"
-          >
-            {submitting ? "Submitting..." : "Submit Registration"}
-          </Button>
-        </form>
-      </section>
-    </main>
-  );
-};
-
-const inputCls =
-  "glass border-white/20 bg-white/5 text-white placeholder:text-white/40 focus-visible:ring-white/40";
-
-const Field = ({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) => (
-  <div className={`space-y-2 ${className ?? ""}`}>
-    <Label className="text-white">{label}</Label>
-    {children}
-  </div>
-);
-
-export default Register;
