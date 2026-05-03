@@ -41,6 +41,7 @@ interface Committee {
 const schema = z.object({
   name: z.string().trim().min(2, "Name is required").max(100),
   className: z.string().trim().min(1, "Class is required").max(50),
+  school: z.string().trim().min(2, "School name is required").max(200),
   email: z.string().trim().email("Invalid email").max(255),
   mobile: z.string().trim().regex(/^[0-9+\-\s]{7,15}$/, "Invalid mobile number"),
   address: z.string().trim().min(5, "Address is required").max(500),
@@ -50,11 +51,11 @@ const schema = z.object({
 });
 
 const optionsForCategory = (cat: Category) => {
-  if (cat === "country") return { options: UN_COUNTRIES, placehoer: "Search UN member country...", label: "Country" };
+  if (cat === "country") return { options: UN_COUNTRIES, placeholder: "Search UN member country...", label: "Country" };
   if (cat === "party") return { options: INDIAN_POLITICAL_PARTIES, placeholder: "Search Indian political party...", label: "Political Party" };
   if (cat === "actor") return { options: INDIAN_ACTORS, placeholder: "Search Indian actor / actress...", label: "Personality" };
   if (cat === "lok_sabha_party") return { options: LOK_SABHA_PARTIES, placeholder: "Search a party currently seated in Lok Sabha...", label: "Lok Sabha Party" };
-  if (cat === "t20_board") return { options: T20_CRICKET_BOARDS, placeholder: "Search an intnational T20 cricket board...", label: "T20 Cricket Board" };
+  if (cat === "t20_board") return { options: T20_CRICKET_BOARDS, placeholder: "Search an international T20 cricket board...", label: "T20 Cricket Board" };
   if (cat === "cricket_team_or_board") return { options: CRICKET_TEAMS_AND_BOARDS, placeholder: "Search a premier-league team or international board...", label: "Cricket Team / Board" };
   if (cat === "cricket_league_team") return { options: CRICKET_LEAGUE_TEAMS, placeholder: "Search a premier-league cricket team...", label: "Cricket Premier-League Team" };
   if (cat === "cricket_league") return { options: CRICKET_LEAGUES, placeholder: "Search a cricket league...", label: "Cricket League" };
@@ -63,13 +64,13 @@ const optionsForCategory = (cat: Category) => {
 
 const Register = () => {
   const [committees, setCommittees] = useState<Committee[]>([]);
-  const [registratipenSite, setRegistrationOpenSite] = useState(true);
+  const [registrationOpenSite, setRegistrationOpenSite] = useState(true);
   const [paymentScannerUrl, setPaymentScannerUrl] = useState<string | null>(null);
-  const [loadingMa, setLoadingMeta] = useState(true);
+  const [loadingMeta, setLoadingMeta] = useState(true);
 
   const [form, setForm] = useState({
-    name: "", className: "", email: "", mobile: "", address: "", experience: "",
-    committee1: "", comttee2: "",
+    name: "", className: "", school: "", email: "", mobile: "", address: "", experience: "",
+    committee1: "", committee2: "",
     preference1: "", preference2: "",
   });
   const [receipt, setReceipt] = useState<File | null>(null);
@@ -88,7 +89,7 @@ const Register = () => {
       ]);
       setCommittees((cRes.data ?? []) as Committee[]);
       const sd = sRes.data as { registration_open?: boolean; payment_scanner_url?: string | null } | null;
-      setRestrationOpenSite(sd?.registration_open ?? true);
+      setRegistrationOpenSite(sd?.registration_open ?? true);
       setPaymentScannerUrl(sd?.payment_scanner_url ?? null);
       setLoadingMeta(false);
     };
@@ -99,7 +100,7 @@ const Register = () => {
     () => committees.find((c) => c.name === form.committee1) ?? null,
     [committees, form.committee1]
   );
-  const committeMeta = useMemo(
+  const committee2Meta = useMemo(
     () => committees.find((c) => c.name === form.committee2) ?? null,
     [committees, form.committee2]
   );
@@ -118,7 +119,6 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Hard guard against double-submits (double click, Enter spam, etc.)
     if (submitting || submitted) return;
 
     const parsed = schema.safeParse(form);
@@ -128,7 +128,7 @@ const Register = () => {
     }
     if (committee1Meta && committee1Meta.category !== "none" && !form.preference1) {
       const opt = optionsForCategory(committee1Meta.category);
-      toast.error(`Please elect ${opt?.label ?? "a"} preference 1`); return;
+      toast.error(`Please select ${opt?.label ?? "a"} preference 1`); return;
     }
     if (committee2Meta && committee2Meta.category !== "none" && !form.preference2) {
       const opt = optionsForCategory(committee2Meta.category);
@@ -138,12 +138,6 @@ const Register = () => {
 
     setSubmitting(true);
     try {
-      // Soft duplicate-email check (Admins-only RLS means this returns 0 rows
-      // for the public client unless an admin-readable mirror exists, so we
-      // also rely on a Postgres unique index to be the real safeguard. The
-      // catch block below converts the unique-violation error to a friendly
-      // message.)
-
       const safeName = receipt.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `${Date.now()}-${crypto.randomUUID()}-${safeName}`;
       const { error: upErr } = await supabase.storage
@@ -154,44 +148,39 @@ const Register = () => {
       const { error: insErr } = await supabase.from("registrations").insert({
         full_name: parsed.data.name,
         class_grade: parsed.data.className,
+        school: parsed.data.school,
         email: parsed.data.email.trim().toLowerCase(),
         mobile: parsed.data.mobile,
         address: parsed.data.address,
         mun_experience: parsed.data.experience,
         committee_pref1: parsed.data.committee1,
         committee_pref2: form.committee2 || null,
-        preference1: form.prece1 || null,
-        preference2: form.prefer || null,
+        preference1: form.preference1 || null,
+        preference2: form.preference2 || null,
         receipt_path: path,
       });
       if (insErr) {
-        // Postgres unique_violation
         if ((insErr as { code?: string }).code === "23505") {
-          throw new Error("This email has alrter. Please contact the Secretariat if you need to update your details.");
+          throw new Error("This email has already been used to register. Please contact the Secretariat if you need to update your details.");
         }
         throw insErr;
       }
 
-      // Switch to a dedicated success screen — no need to re-render the
-      // entire form, gives instant visual feedback.
       setSubmitted(true);
       setForm({
-        name: "", className: "", email: "", mobile: "", address: "",
+        name: "", className: "", school: "", email: "", mobile: "", address: "",
         experience: "", committee1: "", committee2: "",
         preference1: "", preference2: "",
       });
       setReceipt(null);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Sion failed");
+      toast.error(err instanceof Error ? err.message : "Submission failed");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const renderPrefField = (
-    slot: 1 | 2,
-    meta: Committee | null,
-  ) => {
+  const renderPrefField = (slot: 1 | 2, meta: Committee | null) => {
     if (!meta) return null;
     if (meta.category === "none") {
       return (
@@ -291,10 +280,13 @@ const Register = () => {
         <form onSubmit={handleSubmit} className="glass-strong rounded-3xl p-7 md:p-10 space-y-6">
           <div className="grid md:grid-cols-2 gap-5">
             <Field label="Full Name *">
-              <Input value={form.name} onChange={udate("name")} className={inputCls} placeholder="Jane Doe" />
+              <Input value={form.name} onChange={update("name")} className={inputCls} placeholder="Jane Doe" />
             </Field>
             <Field label="Class *">
-              <Input value={form.className} onChange={upate("className")} className={inputCls} placeholder="e.g. XI-A" />
+              <Input value={form.className} onChange={update("className")} className={inputCls} placeholder="e.g. XI-A" />
+            </Field>
+            <Field label="School Name *" className="md:col-span-2">
+              <Input value={form.school} onChange={update("school")} className={inputCls} placeholder="e.g. Delhi Public School, Amaravati" />
             </Field>
             <Field label="Email *">
               <Input type="email" value={form.email} onChange={update("email")} className={inputCls} placeholder="you@email.com" />
@@ -318,7 +310,6 @@ const Register = () => {
             />
           </Field>
 
-          {/* Committee preferences */}
           <div className="grid md:grid-cols-2 gap-5">
             <div className="space-y-2">
               <Label className="text-white">Committee Preference 1 *</Label>
@@ -328,22 +319,21 @@ const Register = () => {
                 onChange={(v) =>
                   setForm((f) => ({
                     ...f,
-                    commttee1: v,
+                    committee1: v,
                     preference1: "",
-                    // if pref2 same as new pref1, clear it
                     committee2: f.committee2 === v ? "" : f.committee2,
                     preference2: f.committee2 === v ? "" : f.preference2,
                   }))
                 }
-                placeholder-"Search committees..."
-                emptyText-"No committees open for registration."
+                placeholder="Search committees..."
+                emptyText="No committees open for registration."
               />
             </div>
-            <div className-"space-y-2">
-              <Label className-"text-white">Committee Preference 2</Label>
+            <div className="space-y-2">
+              <Label className="text-white">Committee Preference 2</Label>
               <SearchableSelect
-                options-{committee2Options}
-                value-{form.committee2}
+                options={committee2Options}
+                value={form.committee2}
                 onChange={(v) => setForm((f) => ({ ...f, committee2: v, preference2: "" }))}
                 placeholder={form.committee1 ? "Search committees..." : "Pick preference 1 first"}
                 emptyText="No other committees available."
@@ -351,25 +341,18 @@ const Register = () => {
             </div>
           </div>
 
-          {/* Per-committee preference dropdowns */}
           <div className="grid md:grid-cols-2 gap-5">
             {renderPrefField(1, committee1Meta)}
             {renderPrefField(2, committee2Meta)}
           </div>
 
-          {/* Payment */}
           <div className="pt-4 border-t border-white/10 space-y-5">
             <h2 className="text-white text-xl font-bold">Payment</h2>
-
             <div className="flex flex-col md:flex-row gap-6 items-center">
               <div className="glass rounded-2xl p-5 flex flex-col items-center gap-3">
                 <div className="h-44 w-44 rounded-xl bg-white/95 flex items-center justify-center text-emerald-950 overflow-hidden">
                   {paymentScannerUrl ? (
-                    <img
-                      src={paymentScannerUrl}
-                      alt="UPI pay code"
-                      className="h-full w-full object-contain p-2"
-                    />
+                    <img src={paymentScannerUrl} alt="UPI payment QR code" className="h-full w-full object-contain p-2" />
                   ) : (
                     <div className="text-center">
                       <QrCode className="h-20 w-20 mx-auto" strokeWidth={1.2} />
@@ -379,7 +362,6 @@ const Register = () => {
                 </div>
                 <p className="text-white/80 text-sm text-center">Scan to pay via any UPI app</p>
               </div>
-
               <div className="flex-1 space-y-3 text-white/80 text-sm">
                 <p><span className="text-white font-semibold">Amount:</span> ₹ 1,500</p>
                 <p>After payment, upload the receipt screenshot below.</p>
@@ -392,12 +374,7 @@ const Register = () => {
                 <span className="text-white/80 text-sm flex-1 truncate">
                   {receipt ? receipt.name : "Click to upload receipt"}
                 </span>
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  className="hidden"
-                  onChange={onFile}
-                />
+                <input type="file" accept="image/*,application/pdf" className="hidden" onChange={onFile} />
               </label>
             </Field>
           </div>
@@ -418,8 +395,8 @@ const Register = () => {
 const inputCls =
   "glass border-white/20 bg-white/5 text-white placeholder:text-white/40 focus-visible:ring-white/40";
 
-const Field = ({ label, chdren }: { label: string; cn: React.ReactNode }) => (
-  <div className="space-y-2">
+const Field = ({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) => (
+  <div className={`space-y-2 ${className ?? ""}`}>
     <Label className="text-white">{label}</Label>
     {children}
   </div>
