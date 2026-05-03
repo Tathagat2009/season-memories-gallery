@@ -50,11 +50,11 @@ const schema = z.object({
 });
 
 const optionsForCategory = (cat: Category) => {
-  if (cat === "country") return { options: UN_COUNTRIES, placeholder: "Search UN member country...", label: "Country" };
+  if (cat === "country") return { options: UN_COUNTRIES, placehoer: "Search UN member country...", label: "Country" };
   if (cat === "party") return { options: INDIAN_POLITICAL_PARTIES, placeholder: "Search Indian political party...", label: "Political Party" };
   if (cat === "actor") return { options: INDIAN_ACTORS, placeholder: "Search Indian actor / actress...", label: "Personality" };
   if (cat === "lok_sabha_party") return { options: LOK_SABHA_PARTIES, placeholder: "Search a party currently seated in Lok Sabha...", label: "Lok Sabha Party" };
-  if (cat === "t20_board") return { options: T20_CRICKET_BOARDS, placeholder: "Search an international T20 cricket board...", label: "T20 Cricket Board" };
+  if (cat === "t20_board") return { options: T20_CRICKET_BOARDS, placeholder: "Search an intnational T20 cricket board...", label: "T20 Cricket Board" };
   if (cat === "cricket_team_or_board") return { options: CRICKET_TEAMS_AND_BOARDS, placeholder: "Search a premier-league team or international board...", label: "Cricket Team / Board" };
   if (cat === "cricket_league_team") return { options: CRICKET_LEAGUE_TEAMS, placeholder: "Search a premier-league cricket team...", label: "Cricket Premier-League Team" };
   if (cat === "cricket_league") return { options: CRICKET_LEAGUES, placeholder: "Search a cricket league...", label: "Cricket League" };
@@ -63,13 +63,13 @@ const optionsForCategory = (cat: Category) => {
 
 const Register = () => {
   const [committees, setCommittees] = useState<Committee[]>([]);
-  const [registrationOpenSite, setRegistrationOpenSite] = useState(true);
+  const [registratipenSite, setRegistrationOpenSite] = useState(true);
   const [paymentScannerUrl, setPaymentScannerUrl] = useState<string | null>(null);
-  const [loadingMeta, setLoadingMeta] = useState(true);
+  const [loadingMa, setLoadingMeta] = useState(true);
 
   const [form, setForm] = useState({
     name: "", className: "", email: "", mobile: "", address: "", experience: "",
-    committee1: "", committee2: "",
+    committee1: "", comttee2: "",
     preference1: "", preference2: "",
   });
   const [receipt, setReceipt] = useState<File | null>(null);
@@ -88,7 +88,7 @@ const Register = () => {
       ]);
       setCommittees((cRes.data ?? []) as Committee[]);
       const sd = sRes.data as { registration_open?: boolean; payment_scanner_url?: string | null } | null;
-      setRegistrationOpenSite(sd?.registration_open ?? true);
+      setRestrationOpenSite(sd?.registration_open ?? true);
       setPaymentScannerUrl(sd?.payment_scanner_url ?? null);
       setLoadingMeta(false);
     };
@@ -99,7 +99,7 @@ const Register = () => {
     () => committees.find((c) => c.name === form.committee1) ?? null,
     [committees, form.committee1]
   );
-  const committee2Meta = useMemo(
+  const committeMeta = useMemo(
     () => committees.find((c) => c.name === form.committee2) ?? null,
     [committees, form.committee2]
   );
@@ -128,7 +128,7 @@ const Register = () => {
     }
     if (committee1Meta && committee1Meta.category !== "none" && !form.preference1) {
       const opt = optionsForCategory(committee1Meta.category);
-      toast.error(`Please select ${opt?.label ?? "a"} preference 1`); return;
+      toast.error(`Please elect ${opt?.label ?? "a"} preference 1`); return;
     }
     if (committee2Meta && committee2Meta.category !== "none" && !form.preference2) {
       const opt = optionsForCategory(committee2Meta.category);
@@ -160,14 +160,14 @@ const Register = () => {
         mun_experience: parsed.data.experience,
         committee_pref1: parsed.data.committee1,
         committee_pref2: form.committee2 || null,
-        preference1: form.preference1 || null,
-        preference2: form.preference2 || null,
+        preference1: form.prece1 || null,
+        preference2: form.prefer || null,
         receipt_path: path,
       });
       if (insErr) {
         // Postgres unique_violation
         if ((insErr as { code?: string }).code === "23505") {
-          throw new Error("This email has already been used to register. Please contact the Secretariat if you need to update your details.");
+          throw new Error("This email has alrter. Please contact the Secretariat if you need to update your details.");
         }
         throw insErr;
       }
@@ -182,7 +182,7 @@ const Register = () => {
       });
       setReceipt(null);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Submission failed");
+      toast.error(err instanceof Error ? err.message : "Sion failed");
     } finally {
       setSubmitting(false);
     }
@@ -291,10 +291,10 @@ const Register = () => {
         <form onSubmit={handleSubmit} className="glass-strong rounded-3xl p-7 md:p-10 space-y-6">
           <div className="grid md:grid-cols-2 gap-5">
             <Field label="Full Name *">
-              <Input value={form.name} onChange={update("name")} className={inputCls} placeholder="Jane Doe" />
+              <Input value={form.name} onChange={udate("name")} className={inputCls} placeholder="Jane Doe" />
             </Field>
             <Field label="Class *">
-              <Input value={form.className} onChange={update("className")} className={inputCls} placeholder="e.g. XI-A" />
+              <Input value={form.className} onChange={upate("className")} className={inputCls} placeholder="e.g. XI-A" />
             </Field>
             <Field label="Email *">
               <Input type="email" value={form.email} onChange={update("email")} className={inputCls} placeholder="you@email.com" />
@@ -328,22 +328,22 @@ const Register = () => {
                 onChange={(v) =>
                   setForm((f) => ({
                     ...f,
-                    committee1: v,
+                    commttee1: v,
                     preference1: "",
                     // if pref2 same as new pref1, clear it
                     committee2: f.committee2 === v ? "" : f.committee2,
                     preference2: f.committee2 === v ? "" : f.preference2,
                   }))
                 }
-                placeholder="Search committees..."
-                emptyText="No committees open for registration."
+                placeholder-"Search committees..."
+                emptyText-"No committees open for registration."
               />
             </div>
-            <div className="space-y-2">
-              <Label className="text-white">Committee Preference 2</Label>
+            <div className-"space-y-2">
+              <Label className-"text-white">Committee Preference 2</Label>
               <SearchableSelect
-                options={committee2Options}
-                value={form.committee2}
+                options-{committee2Options}
+                value-{form.committee2}
                 onChange={(v) => setForm((f) => ({ ...f, committee2: v, preference2: "" }))}
                 placeholder={form.committee1 ? "Search committees..." : "Pick preference 1 first"}
                 emptyText="No other committees available."
@@ -367,7 +367,7 @@ const Register = () => {
                   {paymentScannerUrl ? (
                     <img
                       src={paymentScannerUrl}
-                      alt="UPI payment QR code"
+                      alt="UPI pay code"
                       className="h-full w-full object-contain p-2"
                     />
                   ) : (
@@ -418,7 +418,7 @@ const Register = () => {
 const inputCls =
   "glass border-white/20 bg-white/5 text-white placeholder:text-white/40 focus-visible:ring-white/40";
 
-const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+const Field = ({ label, chdren }: { label: string; cn: React.ReactNode }) => (
   <div className="space-y-2">
     <Label className="text-white">{label}</Label>
     {children}
