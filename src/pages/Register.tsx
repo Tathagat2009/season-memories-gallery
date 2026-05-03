@@ -11,33 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import {
-  INDIAN_ACTORS,
-  INDIAN_POLITICAL_PARTIES,
-  UN_COUNTRIES,
-  LOK_SABHA_PARTIES,
-  T20_CRICKET_BOARDS,
-  CRICKET_TEAMS_AND_BOARDS,
-  CRICKET_LEAGUE_TEAMS,
-  CRICKET_LEAGUES,
+  INDIAN_ACTORS, INDIAN_POLITICAL_PARTIES, UN_COUNTRIES, LOK_SABHA_PARTIES,
+  T20_CRICKET_BOARDS, CRICKET_TEAMS_AND_BOARDS, CRICKET_LEAGUE_TEAMS, CRICKET_LEAGUES,
 } from "@/data/committeeOptions";
 
-type Category =
-  | "country"
-  | "party"
-  | "actor"
-  | "none"
-  | "lok_sabha_party"
-  | "t20_board"
-  | "cricket_team_or_board"
-  | "cricket_league_team"
-  | "cricket_league";
+type Category = "country" | "party" | "actor" | "none" | "lok_sabha_party" | "t20_board" | "cricket_team_or_board" | "cricket_league_team" | "cricket_league";
 
-interface Committee {
-  id: string;
-  name: string;
-  category: Category;
-  registration_open: boolean;
-}
+interface Committee { id: string; name: string; category: Category; registration_open: boolean; }
 
 const schema = z.object({
   name: z.string().trim().min(2, "Name is required").max(100),
@@ -68,12 +48,9 @@ const Register = () => {
   const [registrationOpenSite, setRegistrationOpenSite] = useState(true);
   const [paymentScannerUrl, setPaymentScannerUrl] = useState<string | null>(null);
   const [loadingMeta, setLoadingMeta] = useState(true);
-
   const [form, setForm] = useState({
     name: "", className: "", school: "", email: "", mobile: "", address: "", experience: "",
-    committee1: "", committee2: "",
-    preference1: "", preference2: "",
-    transportation_required: false,
+    committee1: "", committee2: "", preference1: "", preference2: "", transportation_required: false,
   });
   const [receipt, setReceipt] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -83,10 +60,7 @@ const Register = () => {
     const load = async () => {
       setLoadingMeta(true);
       const [cRes, sRes] = await Promise.all([
-        supabase.from("committees")
-          .select("id, name, category, registration_open")
-          .eq("registration_open", true)
-          .order("sort_order").order("name"),
+        supabase.from("committees").select("id, name, category, registration_open").eq("registration_open", true).order("sort_order").order("name"),
         supabase.from("site_settings").select("registration_open, payment_scanner_url" as never).eq("id", 1).maybeSingle(),
       ]);
       setCommittees((cRes.data ?? []) as Committee[]);
@@ -98,84 +72,44 @@ const Register = () => {
     load();
   }, []);
 
-  const committee1Meta = useMemo(
-    () => committees.find((c) => c.name === form.committee1) ?? null,
-    [committees, form.committee1]
-  );
-  const committee2Meta = useMemo(
-    () => committees.find((c) => c.name === form.committee2) ?? null,
-    [committees, form.committee2]
-  );
-
-  const update = (key: keyof typeof form) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setForm((f) => ({ ...f, [key]: e.target.value }));
+  const committee1Meta = useMemo(() => committees.find((c) => c.name === form.committee1) ?? null, [committees, form.committee1]);
+  const committee2Meta = useMemo(() => committees.find((c) => c.name === form.committee2) ?? null, [committees, form.committee2]);
+  const update = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
-    if (file && file.size > 5 * 1024 * 1024) {
-      toast.error("Receipt must be under 5MB"); return;
-    }
+    if (file && file.size > 5 * 1024 * 1024) { toast.error("Receipt must be under 5MB"); return; }
     setReceipt(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting || submitted) return;
-
     const parsed = schema.safeParse(form);
     if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
-    if (form.committee2 && form.committee2 === form.committee1) {
-      toast.error("Committee preference 2 must differ from preference 1"); return;
-    }
-    if (committee1Meta && committee1Meta.category !== "none" && !form.preference1) {
-      const opt = optionsForCategory(committee1Meta.category);
-      toast.error(`Please select ${opt?.label ?? "a"} preference 1`); return;
-    }
-    if (committee2Meta && committee2Meta.category !== "none" && !form.preference2) {
-      const opt = optionsForCategory(committee2Meta.category);
-      toast.error(`Please select ${opt?.label ?? "a"} preference 2`); return;
-    }
+    if (form.committee2 && form.committee2 === form.committee1) { toast.error("Committee preference 2 must differ from preference 1"); return; }
+    if (committee1Meta && committee1Meta.category !== "none" && !form.preference1) { const opt = optionsForCategory(committee1Meta.category); toast.error(`Please select ${opt?.label ?? "a"} preference 1`); return; }
+    if (committee2Meta && committee2Meta.category !== "none" && !form.preference2) { const opt = optionsForCategory(committee2Meta.category); toast.error(`Please select ${opt?.label ?? "a"} preference 2`); return; }
     if (!receipt) { toast.error("Payment receipt is required"); return; }
-
     setSubmitting(true);
     try {
       const safeName = receipt.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `${Date.now()}-${crypto.randomUUID()}-${safeName}`;
-      const { error: upErr } = await supabase.storage
-        .from("receipts")
-        .upload(path, receipt, { contentType: receipt.type, upsert: false });
+      const { error: upErr } = await supabase.storage.from("receipts").upload(path, receipt, { contentType: receipt.type, upsert: false });
       if (upErr) throw upErr;
-
       const { error: insErr } = await supabase.from("registrations").insert({
-        full_name: parsed.data.name,
-        class_grade: parsed.data.className,
-        school: parsed.data.school,
-        email: parsed.data.email.trim().toLowerCase(),
-        mobile: parsed.data.mobile,
-        address: parsed.data.address,
-        mun_experience: parsed.data.experience,
-        committee_pref1: parsed.data.committee1,
-        committee_pref2: form.committee2 || null,
-        preference1: form.preference1 || null,
-        preference2: form.preference2 || null,
-        receipt_path: path,
-        transportation_required: form.transportation_required,
+        full_name: parsed.data.name, class_grade: parsed.data.className, school: parsed.data.school,
+        email: parsed.data.email.trim().toLowerCase(), mobile: parsed.data.mobile, address: parsed.data.address,
+        mun_experience: parsed.data.experience, committee_pref1: parsed.data.committee1,
+        committee_pref2: form.committee2 || null, preference1: form.preference1 || null,
+        preference2: form.preference2 || null, receipt_path: path, transportation_required: form.transportation_required,
       });
       if (insErr) {
-        if ((insErr as { code?: string }).code === "23505") {
-          throw new Error("This email has already been used to register. Please contact the Secretariat if you need to update your details.");
-        }
+        if ((insErr as { code?: string }).code === "23505") { throw new Error("This email has already been used to register."); }
         throw insErr;
       }
-
       setSubmitted(true);
-      setForm({
-        name: "", className: "", school: "", email: "", mobile: "", address: "",
-        experience: "", committee1: "", committee2: "",
-        preference1: "", preference2: "",
-        transportation_required: false,
-      });
+      setForm({ name: "", className: "", school: "", email: "", mobile: "", address: "", experience: "", committee1: "", committee2: "", preference1: "", preference2: "", transportation_required: false });
       setReceipt(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Submission failed");
@@ -186,188 +120,117 @@ const Register = () => {
 
   const renderPrefField = (slot: 1 | 2, meta: Committee | null) => {
     if (!meta) return null;
-    if (meta.category === "none") {
-      return (
-        <p className="text-white/70 text-sm italic glass rounded-xl p-4">
-          {meta.name} allocations are handled separately by the Executive Board. No preference needed.
-        </p>
-      );
-    }
+    if (meta.category === "none") return <p className="text-white/70 text-sm italic glass rounded-xl p-4">{meta.name} allocations are handled separately by the Executive Board.</p>;
     const cfg = optionsForCategory(meta.category);
     if (!cfg) return null;
     const key = slot === 1 ? "preference1" : "preference2";
     return (
       <div className="space-y-2">
         <Label className="text-white">{cfg.label} Preference {slot} *</Label>
-        <SearchableSelect
-          options={cfg.options}
-          value={form[key]}
-          onChange={(v) => setForm((f) => ({ ...f, [key]: v }))}
-          placeholder={cfg.placeholder}
-        />
+        <SearchableSelect options={cfg.options} value={form[key]} onChange={(v) => setForm((f) => ({ ...f, [key]: v }))} placeholder={cfg.placeholder} />
       </div>
     );
   };
 
   const committeeOptionNames = useMemo(() => committees.map((c) => c.name), [committees]);
-  const committee2Options = useMemo(
-    () => committees.filter((c) => c.name !== form.committee1).map((c) => c.name),
-    [committees, form.committee1]
+  const committee2Options = useMemo(() => committees.filter((c) => c.name !== form.committee1).map((c) => c.name), [committees, form.committee1]);
+
+  if (loadingMeta) return (<main className="relative min-h-screen"><Navbar /><div className="flex items-center justify-center pt-40"><Loader2 className="h-6 w-6 animate-spin text-white" /></div></main>);
+
+  if (!registrationOpenSite) return (
+    <main className="relative min-h-screen"><Navbar />
+      <section className="max-w-2xl mx-auto px-6 pt-40 text-center">
+        <div className="glass-strong rounded-3xl p-10">
+          <h1 className="text-white text-3xl font-bold mb-3">Registrations Closed</h1>
+          <p className="text-white/70">Please check back soon.</p>
+        </div>
+      </section>
+    </main>
   );
 
-  if (loadingMeta) {
-    return (
-      <main className="relative min-h-screen">
-        <Navbar />
-        <div className="flex items-center justify-center pt-40">
-          <Loader2 className="h-6 w-6 animate-spin text-white" />
+  if (submitted) return (
+    <main className="relative min-h-screen"><Navbar />
+      <section className="max-w-2xl mx-auto px-6 pt-40 text-center">
+        <div className="glass-strong rounded-3xl p-10 ring-1 ring-emerald-400/30">
+          <div className="mx-auto mb-5 h-16 w-16 rounded-full bg-emerald-500/20 ring-2 ring-emerald-400 flex items-center justify-center text-emerald-300 text-3xl">✓</div>
+          <h1 className="text-white text-3xl font-bold mb-3">Registration Received</h1>
+          <p className="text-white/70 mb-6">Thank you for registering for DPSAMUN. The Secretariat will reach out with your committee allocation soon.</p>
+          <Button type="button" onClick={() => setSubmitted(false)} className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-semibold">Register another delegate</Button>
         </div>
-      </main>
-    );
-  }
-
-  if (!registrationOpenSite) {
-    return (
-      <main className="relative min-h-screen">
-        <Navbar />
-        <section className="max-w-2xl mx-auto px-6 pt-40 text-center">
-          <div className="glass-strong rounded-3xl p-10">
-            <h1 className="text-white text-3xl font-bold mb-3">Registrations Closed</h1>
-            <p className="text-white/70">Please check back soon. Follow our updates for the next opening window.</p>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
-  if (submitted) {
-    return (
-      <main className="relative min-h-screen">
-        <Navbar />
-        <section className="max-w-2xl mx-auto px-6 pt-40 text-center">
-          <div className="glass-strong rounded-3xl p-10 ring-1 ring-emerald-400/30 shadow-[0_0_60px_rgba(16,185,129,0.15)]">
-            <div className="mx-auto mb-5 h-16 w-16 rounded-full bg-emerald-500/20 ring-2 ring-emerald-400 flex items-center justify-center text-emerald-300 text-3xl">
-              ✓
-            </div>
-            <h1 className="text-white text-3xl font-bold mb-3">Registration Received</h1>
-            <p className="text-white/70 mb-6">
-              Thank you for registering for DPSAMUN. Your details and payment receipt have been recorded.
-              The Secretariat will reach out with your committee allocation soon.
-            </p>
-            <Button
-              type="button"
-              onClick={() => setSubmitted(false)}
-              className="bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-semibold"
-            >
-              Register another delegate
-            </Button>
-          </div>
-        </section>
-      </main>
-    );
-  }
+      </section>
+    </main>
+  );
 
   return (
     <main className="relative min-h-screen pb-20">
       <Navbar />
       <section className="relative z-10 max-w-3xl mx-auto px-6 pt-32">
         <div className="text-center mb-10">
-          <h1 className="text-white text-4xl md:text-5xl font-extrabold tracking-tight">
-            Register for DPSAMUN
-          </h1>
-          <p className="text-white/70 mt-3">
-            Complete your registration and reserve your seat at the table.
-          </p>
+          <h1 className="text-white text-4xl md:text-5xl font-extrabold tracking-tight">Register for DPSAMUN</h1>
+          <p className="text-white/70 mt-3">Complete your registration and reserve your seat at the table.</p>
         </div>
-
         <form onSubmit={handleSubmit} className="glass-strong rounded-3xl p-7 md:p-10 space-y-6">
           <div className="grid md:grid-cols-2 gap-5">
-            <Field label="Full Name *">
-              <Input value={form.name} onChange={update("name")} className={inputCls} placeholder="Jane Doe" />
-            </Field>
-            <Field label="Class *">
-              <Input value={form.className} onChange={update("className")} className={inputCls} placeholder="e.g. XI-A" />
-            </Field>
-            <Field label="School Name *" className="md:col-span-2">
-              <Input value={form.school} onChange={update("school")} className={inputCls} placeholder="e.g. Delhi Public School, Amaravati" />
-            </Field>
-            <Field label="Email *">
-              <Input type="email" value={form.email} onChange={update("email")} className={inputCls} placeholder="you@email.com" />
-            </Field>
-            <Field label="Mobile *">
-              <Input value={form.mobile} onChange={update("mobile")} className={inputCls} placeholder="+91 ..." />
-            </Field>
+            <Field label="Full Name *"><Input value={form.name} onChange={update("name")} className={inputCls} placeholder="Jane Doe" /></Field>
+            <Field label="Class *"><Input value={form.className} onChange={update("className")} className={inputCls} placeholder="e.g. XI-A" /></Field>
+            <Field label="School Name *" className="md:col-span-2"><Input value={form.school} onChange={update("school")} className={inputCls} placeholder="e.g. Delhi Public School, Amaravati" /></Field>
+            <Field label="Email *"><Input type="email" value={form.email} onChange={update("email")} className={inputCls} placeholder="you@email.com" /></Field>
+            <Field label="Mobile *"><Input value={form.mobile} onChange={update("mobile")} className={inputCls} placeholder="+91 ..." /></Field>
           </div>
-
-          <Field label="Address *">
-            <Textarea value={form.address} onChange={update("address")} className={inputCls} rows={2} placeholder="Street, city, pincode" />
-          </Field>
-
-          <Field label="MUN Experience *">
-            <Textarea
-              value={form.experience}
-              onChange={update("experience")}
-              className={inputCls}
-              rows={3}
-              placeholder="Past conferences, committees, awards (or 'First MUN')"
-            />
-          </Field>
-
+          <Field label="Address *"><Textarea value={form.address} onChange={update("address")} className={inputCls} rows={2} placeholder="Street, city, pincode" /></Field>
+          <Field label="MUN Experience *"><Textarea value={form.experience} onChange={update("experience")} className={inputCls} rows={3} placeholder="Past conferences, committees, awards (or 'First MUN')" /></Field>
           <div className="grid md:grid-cols-2 gap-5">
             <div className="space-y-2">
               <Label className="text-white">Committee Preference 1 *</Label>
-              <SearchableSelect
-                options={committeeOptionNames}
-                value={form.committee1}
-                onChange={(v) =>
-                  setForm((f) => ({
-                    ...f,
-                    committee1: v,
-                    preference1: "",
-                    committee2: f.committee2 === v ? "" : f.committee2,
-                    preference2: f.committee2 === v ? "" : f.preference2,
-                  }))
-                }
-                placeholder="Search committees..."
-                emptyText="No committees open for registration."
-              />
+              <SearchableSelect options={committeeOptionNames} value={form.committee1} onChange={(v) => setForm((f) => ({ ...f, committee1: v, preference1: "", committee2: f.committee2 === v ? "" : f.committee2, preference2: f.committee2 === v ? "" : f.preference2 }))} placeholder="Search committees..." emptyText="No committees open for registration." />
             </div>
             <div className="space-y-2">
               <Label className="text-white">Committee Preference 2</Label>
-              <SearchableSelect
-                options={committee2Options}
-                value={form.committee2}
-                onChange={(v) => setForm((f) => ({ ...f, committee2: v, preference2: "" }))}
-                placeholder={form.committee1 ? "Search committees..." : "Pick preference 1 first"}
-                emptyText="No other committees available."
-              />
+              <SearchableSelect options={committee2Options} value={form.committee2} onChange={(v) => setForm((f) => ({ ...f, committee2: v, preference2: "" }))} placeholder={form.committee1 ? "Search committees..." : "Pick preference 1 first"} emptyText="No other committees available." />
             </div>
           </div>
-
-          <div className="grid md:grid-cols-2 gap-5">
-            {renderPrefField(1, committee1Meta)}
-            {renderPrefField(2, committee2Meta)}
-          </div>
-
-          {/* Transportation */}
+          <div className="grid md:grid-cols-2 gap-5">{renderPrefField(1, committee1Meta)}{renderPrefField(2, committee2Meta)}</div>
           <div className="glass rounded-2xl p-5 flex items-center justify-between gap-4">
             <div>
               <p className="text-white font-semibold">School Transportation</p>
               <p className="text-white/60 text-sm mt-0.5">Do you require transportation provided by the school?</p>
             </div>
-            <Switch
-              checked={form.transportation_required}
-              onCheckedChange={(v) => setForm((f) => ({ ...f, transportation_required: v }))}
-            />
+            <Switch checked={form.transportation_required} onCheckedChange={(v) => setForm((f) => ({ ...f, transportation_required: v }))} />
           </div>
-
-          {/* Payment */}
           <div className="pt-4 border-t border-white/10 space-y-5">
             <h2 className="text-white text-xl font-bold">Payment</h2>
             <div className="flex flex-col md:flex-row gap-6 items-center">
               <div className="glass rounded-2xl p-5 flex flex-col items-center gap-3">
                 <div className="h-44 w-44 rounded-xl bg-white/95 flex items-center justify-center text-emerald-950 overflow-hidden">
-                  {paymentScannerUrl ? (
-                    <img src={paymentScannerUrl} alt="UPI payment QR code" className="h-full w-full object-contain p-2" />
-                  ) : (
-                    <div className="text-center">
+                  {paymentScannerUrl ? <img src={paymentScannerUrl} alt="UPI payment QR code" className="h-full w-full object-contain p-2" /> : <div className="text-center"><QrCode className="h-20 w-20 mx-auto" strokeWidth={1.2} /><p className="text-xs font-semibold mt-2">UPI QR PLACEHOLDER</p></div>}
+                </div>
+                <p className="text-white/80 text-sm text-center">Scan to pay via any UPI app</p>
+              </div>
+              <div className="flex-1 space-y-3 text-white/80 text-sm">
+                <p><span className="text-white font-semibold">Amount:</span> ₹ 1,500</p>
+                <p>After payment, upload the receipt screenshot below.</p>
+              </div>
+            </div>
+            <Field label="Payment Receipt * (image / PDF, max 5MB)">
+              <label className="glass rounded-xl border-dashed border-2 border-white/20 px-4 py-5 flex items-center gap-3 cursor-pointer hover:bg-white/10 transition">
+                <Upload className="h-5 w-5 text-white" />
+                <span className="text-white/80 text-sm flex-1 truncate">{receipt ? receipt.name : "Click to upload receipt"}</span>
+                <input type="file" accept="image/*,application/pdf" className="hidden" onChange={onFile} />
+              </label>
+            </Field>
+          </div>
+          <Button type="submit" disabled={submitting} className="w-full glass-strong rounded-full py-6 text-white font-semibold text-base hover:bg-white/20 border border-white/20">
+            {submitting ? "Submitting..." : "Submit Registration"}
+          </Button>
+        </form>
+      </section>
+    </main>
+  );
+};
+
+const inputCls = "glass border-white/20 bg-white/5 text-white placeholder:text-white/40 focus-visible:ring-white/40";
+const Field = ({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) => (
+  <div className={`space-y-2 ${className ?? ""}`}><Label className="text-white">{label}</Label>{children}</div>
+);
+
+export default Register;
