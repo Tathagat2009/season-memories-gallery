@@ -10,6 +10,7 @@ interface Registration {
   id: string;
   full_name: string;
   class_grade: string;
+  school: string | null;
   email: string;
   mobile: string;
   address: string;
@@ -60,7 +61,8 @@ const DelegatesTab = () => {
       r.committee_pref1.toLowerCase().includes(s) ||
       (r.committee_pref2 ?? "").toLowerCase().includes(s) ||
       (r.preference1 ?? "").toLowerCase().includes(s) ||
-      (r.preference2 ?? "").toLowerCase().includes(s)
+      (r.preference2 ?? "").toLowerCase().includes(s) ||
+      (r.school ?? "").toLowerCase().includes(s)
     );
   });
 
@@ -76,7 +78,7 @@ const DelegatesTab = () => {
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search name / email / committee"
+            placeholder="Search name / email / school / committee"
             className={`${inputCls} pl-9`}
           />
         </div>
@@ -94,6 +96,7 @@ const DelegatesTab = () => {
             <thead className="bg-white/5 text-white/70 text-xs uppercase tracking-wider">
               <tr>
                 <th className="px-3 py-2 text-left">Name</th>
+                <th className="px-3 py-2 text-left">School</th>
                 <th className="px-3 py-2 text-left">Class</th>
                 <th className="px-3 py-2 text-left">Email</th>
                 <th className="px-3 py-2 text-left">Mobile</th>
@@ -109,6 +112,7 @@ const DelegatesTab = () => {
               {filtered.map((r) => (
                 <tr key={r.id} className="border-t border-white/10 hover:bg-white/5">
                   <td className="px-3 py-2 font-medium">{r.full_name}</td>
+                  <td className="px-3 py-2">{r.school ?? "—"}</td>
                   <td className="px-3 py-2">{r.class_grade}</td>
                   <td className="px-3 py-2">{r.email}</td>
                   <td className="px-3 py-2">{r.mobile}</td>
