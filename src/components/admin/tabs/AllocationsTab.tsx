@@ -28,6 +28,7 @@ interface RegRow {
   id: string;
   full_name: string;
   class_grade: string;
+  school: string | null;
   email: string;
   address: string;
   committee_pref1: string;
@@ -57,7 +58,7 @@ const AllocationsTab = () => {
     setLoading(true);
     const [a, r, c] = await Promise.all([
       supabase.from("allocations").select("*").order("created_at", { ascending: false }),
-      supabase.from("registrations").select("id, full_name, class_grade, email, address, committee_pref1").order("full_name"),
+      supabase.from("registrations").select("id, full_name, class_grade, school, email, address, committee_pref1").order("full_name"),
       supabase.from("committees").select("id, name").order("name"),
     ]);
     if (a.error) toast.error(a.error.message);
@@ -84,13 +85,11 @@ const AllocationsTab = () => {
     });
   };
 
-  // Searchable dropdown of delegate names from registrations
   const delegateNames = useMemo(
     () => registrations.map((r) => r.full_name),
     [registrations]
   );
 
-  // When delegate name is selected, auto-fill school/class from registrations
   const selectDelegate = (name: string) => {
     const reg = registrations.find((r) => r.full_name === name);
     if (reg) {
@@ -99,8 +98,7 @@ const AllocationsTab = () => {
         delegate_name: reg.full_name,
         registration_id: reg.id,
         class_grade: reg.class_grade ?? "",
-        // 'school' not in registrations schema; default to address fragment if blank
-        school: f.school || "DPS Amaravati",
+        school: reg.school ?? "",
       }));
     } else {
       setForm((f) => ({ ...f, delegate_name: name }));
@@ -175,7 +173,7 @@ const AllocationsTab = () => {
         </div>
 
         <Field label="School">
-          <Input value={form.school} onChange={(e) => setForm({ ...form, school: e.target.value })} className={inputCls} placeholder="DPS Amaravati" />
+          <Input value={form.school} onChange={(e) => setForm({ ...form, school: e.target.value })} className={inputCls} placeholder="Delhi Public School, Amaravati" />
         </Field>
         <Field label="Class">
           <Input value={form.class_grade} onChange={(e) => setForm({ ...form, class_grade: e.target.value })} className={inputCls} placeholder="XI-A" />
@@ -234,7 +232,8 @@ const AllocationsTab = () => {
             <thead className="bg-white/5 text-white/70 text-xs uppercase">
               <tr>
                 <th className="px-3 py-2 text-left">Delegate</th>
-                <th className="px-3 py-2 text-left">School / Class</th>
+                <th className="px-3 py-2 text-left">School</th>
+                <th className="px-3 py-2 text-left">Class</th>
                 <th className="px-3 py-2 text-left">Committee</th>
                 <th className="px-3 py-2 text-left">Country</th>
                 <th className="px-3 py-2 text-left">Status</th>
@@ -244,13 +243,14 @@ const AllocationsTab = () => {
             </thead>
             <tbody>
               {rows.length === 0 ? (
-                <tr><td colSpan={7} className="px-3 py-6 text-center text-white/50">No allocations yet.</td></tr>
+                <tr><td colSpan={8} className="px-3 py-6 text-center text-white/50">No allocations yet.</td></tr>
               ) : rows.map((a) => {
                 const com = committees.find((c) => c.id === a.committee_id);
                 return (
                   <tr key={a.id} className="border-t border-white/10 hover:bg-white/5">
                     <td className="px-3 py-2">{a.delegate_name ?? "—"}</td>
-                    <td className="px-3 py-2 text-white/70">{[a.school, a.class_grade].filter(Boolean).join(" · ") || "—"}</td>
+                    <td className="px-3 py-2 text-white/70">{a.school ?? "—"}</td>
+                    <td className="px-3 py-2 text-white/70">{a.class_grade ?? "—"}</td>
                     <td className="px-3 py-2">{com?.name ?? "—"}</td>
                     <td className="px-3 py-2">{a.portfolio ?? "—"}</td>
                     <td className="px-3 py-2 capitalize">{a.status}</td>
