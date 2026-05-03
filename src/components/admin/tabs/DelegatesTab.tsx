@@ -21,6 +21,7 @@ interface Registration {
   preference2: string | null;
   receipt_path: string | null;
   created_at: string;
+  transportation_required: boolean | null;
 }
 
 const DelegatesTab = () => {
@@ -100,6 +101,7 @@ const DelegatesTab = () => {
                 <th className="px-3 py-2 text-left">Class</th>
                 <th className="px-3 py-2 text-left">Email</th>
                 <th className="px-3 py-2 text-left">Mobile</th>
+                <th className="px-3 py-2 text-left">Transport</th>
                 <th className="px-3 py-2 text-left">Committee 1</th>
                 <th className="px-3 py-2 text-left">Pref 1</th>
                 <th className="px-3 py-2 text-left">Committee 2</th>
@@ -116,6 +118,15 @@ const DelegatesTab = () => {
                   <td className="px-3 py-2">{r.class_grade}</td>
                   <td className="px-3 py-2">{r.email}</td>
                   <td className="px-3 py-2">{r.mobile}</td>
+                  <td className="px-3 py-2">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                      r.transportation_required
+                        ? "bg-emerald-500/20 text-emerald-300"
+                        : "bg-white/10 text-white/50"
+                    }`}>
+                      {r.transportation_required ? "Yes" : "No"}
+                    </span>
+                  </td>
                   <td className="px-3 py-2">{r.committee_pref1}</td>
                   <td className="px-3 py-2">{r.preference1 ?? "—"}</td>
                   <td className="px-3 py-2">{r.committee_pref2 ?? "—"}</td>
