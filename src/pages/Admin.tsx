@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   X,
+  Shield,
 } from "lucide-react";
 import munLogo from "@/assets/mun-logo.jpeg";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import CommitteesTab from "@/components/admin/tabs/CommitteesTab";
 import ScheduleTab from "@/components/admin/tabs/ScheduleTab";
 import AllocationsTab from "@/components/admin/tabs/AllocationsTab";
 import TeamTab from "@/components/admin/tabs/TeamTab";
+import EBTab from "@/components/admin/tabs/EBTab";
 import NoticesTab from "@/components/admin/tabs/NoticesTab";
 import ExportTab from "@/components/admin/tabs/ExportTab";
 import SettingsTab from "@/components/admin/tabs/SettingsTab";
@@ -32,6 +34,7 @@ type TabKey =
   | "schedule"
   | "allocations"
   | "team"
+  | "eb"
   | "notices"
   | "export"
   | "settings";
@@ -42,6 +45,7 @@ const TABS: { key: TabKey; label: string; icon: React.ComponentType<{ className?
   { key: "schedule", label: "Manage Schedule", icon: Calendar },
   { key: "allocations", label: "Manage Allocations", icon: ClipboardList },
   { key: "team", label: "Manage Team", icon: UserCog },
+  { key: "eb", label: "Executive Board", icon: Shield },
   { key: "notices", label: "Manage Notices", icon: Megaphone },
   { key: "export", label: "Export Data", icon: Download },
   { key: "settings", label: "Site Settings", icon: Settings },
@@ -59,6 +63,7 @@ const Admin = () => {
       case "schedule": return <ScheduleTab />;
       case "allocations": return <AllocationsTab />;
       case "team": return <TeamTab />;
+      case "eb": return <EBTab />;
       case "notices": return <NoticesTab />;
       case "export": return <ExportTab />;
       case "settings": return <SettingsTab />;
@@ -68,7 +73,6 @@ const Admin = () => {
   return (
     <main className="min-h-screen px-3 sm:px-6 py-6">
       <div className="max-w-[1400px] mx-auto">
-        {/* Top bar */}
         <div className="glass-strong rounded-2xl px-4 py-3 mb-4 flex items-center justify-between gap-3">
           <Link to="/" className="flex items-center gap-3 min-w-0">
             <span className="h-9 w-9 rounded-full overflow-hidden ring-2 ring-white/30 shrink-0">
@@ -99,7 +103,6 @@ const Admin = () => {
         </div>
 
         <div className="grid lg:grid-cols-[260px_1fr] gap-4">
-          {/* Sidebar */}
           <aside className={`${navOpen ? "block" : "hidden"} lg:block`}>
             <nav className="glass-strong rounded-2xl p-3 space-y-1 sticky top-4">
               {TABS.map(({ key, label, icon: Icon }) => (
@@ -128,7 +131,6 @@ const Admin = () => {
             </nav>
           </aside>
 
-          {/* Content */}
           <section className="min-w-0">
             <div className="glass-strong rounded-2xl p-4 sm:p-6">{renderTab()}</div>
           </section>
