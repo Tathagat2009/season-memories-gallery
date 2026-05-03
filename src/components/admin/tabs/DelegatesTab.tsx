@@ -29,9 +29,7 @@ const DelegatesTab = () => {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   const load = async () => {
     setLoading(true);
@@ -119,11 +117,7 @@ const DelegatesTab = () => {
                   <td className="px-3 py-2">{r.email}</td>
                   <td className="px-3 py-2">{r.mobile}</td>
                   <td className="px-3 py-2">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      r.transportation_required
-                        ? "bg-emerald-500/20 text-emerald-300"
-                        : "bg-white/10 text-white/50"
-                    }`}>
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${r.transportation_required ? "bg-emerald-500/20 text-emerald-300" : "bg-white/10 text-white/50"}`}>
                       {r.transportation_required ? "Yes" : "No"}
                     </span>
                   </td>
@@ -131,9 +125,7 @@ const DelegatesTab = () => {
                   <td className="px-3 py-2">{r.preference1 ?? "—"}</td>
                   <td className="px-3 py-2">{r.committee_pref2 ?? "—"}</td>
                   <td className="px-3 py-2">{r.preference2 ?? "—"}</td>
-                  <td className="px-3 py-2 text-white/60">
-                    {new Date(r.created_at).toLocaleDateString()}
-                  </td>
+                  <td className="px-3 py-2 text-white/60">{new Date(r.created_at).toLocaleDateString()}</td>
                   <td className="px-3 py-2">
                     <Button
                       type="button"
