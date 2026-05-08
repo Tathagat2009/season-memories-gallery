@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Upload, QrCode, Loader2 } from "lucide-react";
+import ReCAPTCHA from "react-google-recaptcha";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,6 @@ import {
 } from "@/data/committeeOptions";
 
 type Category = "country" | "party" | "actor" | "none" | "lok_sabha_party" | "t20_board" | "cricket_team_or_board" | "cricket_league_team" | "cricket_league";
-
 interface Committee { id: string; name: string; category: Category; registration_open: boolean; }
 
 const schema = z.object({
@@ -55,6 +55,8 @@ const Register = () => {
   const [receipt, setReceipt] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [captchaVerified, setCaptchaVerified] = useState(false);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -91,6 +93,7 @@ const Register = () => {
     if (committee1Meta && committee1Meta.category !== "none" && !form.preference1) { const opt = optionsForCategory(committee1Meta.category); toast.error(`Please select ${opt?.label ?? "a"} preference 1`); return; }
     if (committee2Meta && committee2Meta.category !== "none" && !form.preference2) { const opt = optionsForCategory(committee2Meta.category); toast.error(`Please select ${opt?.label ?? "a"} preference 2`); return; }
     if (!receipt) { toast.error("Payment receipt is required"); return; }
+    if (!captchaVerified) { toast.error("Please complete the reCAPTCHA verification"); return; }
     setSubmitting(true);
     try {
       const safeName = receipt.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -102,13 +105,16 @@ const Register = () => {
         email: parsed.data.email.trim().toLowerCase(), mobile: parsed.data.mobile, address: parsed.data.address,
         mun_experience: parsed.data.experience, committee_pref1: parsed.data.committee1,
         committee_pref2: form.committee2 || null, preference1: form.preference1 || null,
-        preference2: form.preference2 || null, receipt_path: path, transportation_required: form.transportation_required,
+        preference2: form.preference2 || null, receipt_path: path,
+        transportation_required: form.transportation_required,
       });
       if (insErr) {
         if ((insErr as { code?: string }).code === "23505") { throw new Error("This email has already been used to register."); }
         throw insErr;
       }
       setSubmitted(true);
+      setCaptchaVerified(false);
+      recaptchaRef.current?.reset();
       setForm({ name: "", className: "", school: "", email: "", mobile: "", address: "", experience: "", committee1: "", committee2: "", preference1: "", preference2: "", transportation_required: false });
       setReceipt(null);
     } catch (err) {
@@ -218,6 +224,15 @@ const Register = () => {
                 <input type="file" accept="image/*,application/pdf" className="hidden" onChange={onFile} />
               </label>
             </Field>
+          </div>
+          <div className="flex justify-center">
+            <ReCAPTCHA
+              ref={recaptchaRef}
+              sitekey="6Lc9od8sAAAAAEn8ypqqNQh1YP1Py6KNu6je3Njk"
+              onChange={(val) => setCaptchaVerified(!!val)}
+              onExpired={() => setCaptchaVerified(false)}
+              theme="dark"
+            />
           </div>
           <Button type="submit" disabled={submitting} className="w-full glass-strong rounded-full py-6 text-white font-semibold text-base hover:bg-white/20 border border-white/20">
             {submitting ? "Submitting..." : "Submit Registration"}
